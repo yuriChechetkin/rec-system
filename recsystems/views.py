@@ -1,8 +1,8 @@
 from django.shortcuts import render
 from django.contrib.auth.models import User, Group
-from diploma.recsystems.models import  recommendations
 from rest_framework import viewsets
 from diploma.recsystems.serializers import UserSerializer, GroupSerializer, RecSerializer, recommendationsSerializer
+from diploma.recsystems.models import  recommendations
 from django.contrib.auth.models import User
 from rest_framework import status
 from rest_framework import viewsets
@@ -21,10 +21,11 @@ import numpy as np
 
 
 """
-1)  описание, 5 страниц минимум, как получится
-2)  структура врб, mindmap
-3)  github
-4)  ~
+шаги по запуску из консоли:
+1) перейти в директорию diploma
+2) virtualenv ENVdiploma
+3) ENVdiploma\Scripts\activate
+4) python manage.py runserver
 """
 
 
@@ -50,7 +51,9 @@ class GroupViewSet(viewsets.ModelViewSet):
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
 
-class RecViewSet(viewsets.ModelViewSet):
+
+#############################################################CONTETN-BASED###################################################################################
+class ContentBasedViewSet(viewsets.ModelViewSet):
     """
     A viewset that provides the standard actions
     """
@@ -58,159 +61,102 @@ class RecViewSet(viewsets.ModelViewSet):
     serializer_class = RecSerializer
 
 
-    @list_route(methods=['post'])
-    def rec(self, request):
-        #data = csv.reader('A1Ratings.csv')
-        #file = open('A1Ratings.csv', 'r')
-        #data = [row for row in csv.reader(file)]
-        row = self.request.data.get("row")
-        cell = self.request.data.get("cell")
-        df = pd.read_csv('A1Ratings.csv')
-        if row:
-            if cell:
-                return  Response({df.columns[int(row)]+ " at " + str(cell) + " score": df[df.columns[int(row)]][int(cell)]})
-            else:
-                return  Response({df.columns[int(row)]: df[df.columns[int(row)]]})
-        else:
-            return Response({"Error: look at the full table": df})
+    """показать все items
+    input - none
+    output - items
 
-
-
+    """
     @list_route(methods=['post'])
     def showitems(self, request):
-        return Response({"result": items})
+        try:
+            return Response({"result": items})
+        except:
+            return Response("Error")
 
+    """показать всех users
+    input - none
+    output - users
 
+    """
     @list_route(methods=['post'])
     def showusers(self, request):
-        return Response({"result": users})
+        try:
+            return Response({"result": users})
+        except:
+            return Response({"Error"})
 
+    """добавить item
+    input - id из API kudago.com
+    output - successfulness
 
+    """
+    #http://kudago.com/public-api/v1/events/?fields=id,dates,title,tags&order_by=-publication_date&page_size=100
     @list_route(methods=['post'])
     def additem(self, request):
-        id = self.request.data.get("row")
-        addItem(int(id))
-        return Response({"result": "success"})
+        try:
+            id = self.request.data.get("row")
+            addItem(int(id))
+            return Response({"result": "success"})
+        except:
+            return Response({"Error"})
 
+    """добавить user
+    input - имя/идентификатор пользователя
+    output - successfulness
+
+    """
     @list_route(methods=['post'])
     def adduser(self, request):
-        name = self.request.data.get("row")
-        addUser(name)
-        return Response({"result": "success"})
+        try:
+            name = self.request.data.get("row")
+            addUser(name)
+            return Response({"result": "success"})
+        except:
+            return Response({"Error"})
 
+    """добавить оценку
+    input - id объетк из API kudago.com, оценка, имя/идентификатор пользователя
+    output - successfulness, список пользователей
+
+    """
     @list_route(methods=['post'])
     def addUserScore(self, request):
-        name = self.request.data.get("row")
-        id = self.request.data.get("cell")
-        users=addUserScore(id, 1, name)
-        return Response({"result": users})
-
-
-    @list_route(methods=['post'])
-    def content(self, request):
-        user = self.request.data.get("row")
-        recommendations = getRec(int(user))
-
-        return Response({"result": recommendations})
-
-
-    @list_route(methods=['post'])
-    def test2(self, request):
-        user = self.request.data.get("row")
-        df = pd.read_csv('A1Ratings.csv')
-        df = np.asmatrix()
-        id =  str(df[df.columns[int(0)]][int(user)])
-        rec = get_item_item_association_matrix(df)
-        result = "succes: our reccomendations for user: " + id
-        return Response({result: rec})
-
-    @list_route(methods=['post'])
-    def test(self, request):
-        #rec = makeRecommendation ('ivan', ReadFile(), 5, 5)
-        """
-        http://habrahabr.ru/post/150399/
-        привести A1Ratings.csv к виду словарю
-        аналогия с файлом Ratings.csv
-        df = pd.read_csv('A1Ratings.csv')
-        if row:
-            if cell:
-                return  Response({df.columns[int(row)]+ " at " + str(cell) + " score": df[df.columns[int(row)]][int(cell)]})
+        try:
+            name = self.request.data.get("row")
+            id = self.request.data.get("cell")
+            score = int(self.request.data.get("score"))
+            if(score==1 or score==-1 or score==0):
+                users=addUserScore(id, score, name)
+                return Response({"result": users})
             else:
-                return  Response({df.columns[int(row)]: df[df.columns[int(row)]]})
-        """
-        user = self.request.data.get("row")
-        df = pd.read_csv('A1Ratings.csv')
-        id =  str(df[df.columns[int(0)]][int(user)])
-        rec = makeRecommendation(id, File(), 5, 5)
-        result = "succes: our reccomendations for user: " + id
-        return Response({result: rec})
+                return Response({"Error": "score must be 1, 0 or -1"})
+        except:
+            return Response({"Error"})
 
 
+    """получить рекомендации content-based
+    input - имя/идентификатор пользователя, количество оценок
+    output - content-based рекомендации
+
+    """
+    @list_route(methods=['post'])
+    def recommendations(self, request):
+        try:
+            user = self.request.data.get("row")
+            n = self.request.data.get("cell")
+            recommendations = getRec(int(user), int(n))
+            result = "succes: our reccomendations for user: " + users.columns[int(user)]
+            return Response({result: recommendations})
+        except:
+            return Response({"Error"})
 
 
+#############################################################CRUD-CONTENT-BASED###################################################################################
+"""добавить оценку
+    input - id объетк из API kudago.com, оценка, имя/идентификатор пользователя
+    output - список пользователей
 
-
-    @list_route()
-    def lists(self, request):
-        txt=""
-        txt2=""
-        f = open('rating.txt', 'r')
-        for line in f:
-           line =  line.split(',')
-           if(txt2==""):
-               txt2=line
-           txt= txt + '  ' + line[0]# + ' ' + line[1]
-           for score in line:
-                txt2 = txt2 #+ score
-
-        f.close()
-        return Response({"list of Users id": txt, "list of films":txt2})
-
-    @detail_route()
-    def score(self, request, pk=None):
-        txt=""
-        result=0
-        count=0
-        f = open('rating.txt', 'r')
-        if(pk.__len__()>2):
-            for line in f:
-               line =  line.split(',')
-               txt = txt + '  ' + line[int(pk[0])]# + ' ' + line[1]
-
-            f.close()
-            return Response({"cell/row": txt[int(pk[2])]})
-        else:
-            for line in f:
-               line =  line.split(',')
-               txt = txt + '  ' + line[int(pk[0])]# + ' ' + line[1]
-               if line[int(pk[0])].isdigit():
-                   result = result + int(line[int(pk[0])])
-                   count = count + 1
-            result = result / count
-            f.close()
-            return Response({"countOfScores": str(count), "avgScore": str(result),"row": txt})
-
-
-    @detail_route(methods=['post'])
-    def colloborative(self, request, pk=None):
-        row = self.request.data.get("row")
-        cell = self.request.data.get("cell")
-        txt=""
-        result=0
-        count=0
-        f = open('rating.txt', 'r')
-        for line in f:
-            line =  line.split(',')
-            txt = txt + '  ' + line[int(row)]# + ' ' + line[1]
-            if line[int(row)].isdigit():
-                result = result + int(line[int(row)])
-                count = count + 1
-        result = result / count
-        f.close()
-        return Response({"countOfScores": str(count), "avgScore": str(result),"id": pk, "row": row, "cell": cell, "row/cell":txt[int(cell)]})
-
-
-#############################################################CRUD###################################################################################
+"""
 def addUserScore(Id, score, name):
     url = 'http://kudago.com/public-api/v1/events/' + str(Id) +  '/?fields=id,title,categories,tags&order_by=-publication_date'
     r = urllib.request.urlopen(url)
@@ -222,9 +168,15 @@ def addUserScore(Id, score, name):
     else:
         addItem(Id)
         addUserScore(Id, score, name)
+    users.to_csv('content-users2.csv', sep=',', encoding='utf-8')
     return users
 
 
+"""добавить item
+    input - id из API kudago.com
+    output - none
+
+"""
 def addItem(Id):
     #pass
     countItems = items.columns.size
@@ -280,12 +232,22 @@ def index(attr):
         if(attr==items.columns[i]):
             return i
 
+"""добавить user
+    input - имя/идентификатор пользователя
+    output - none
+
+"""
 def addUser(name):
     #pass
     userEmptyScores = np.zeros(users.size/users.columns.size)
     users[name]=userEmptyScores
     users.to_csv('content-users2.csv', sep=',', encoding='utf-8')
 
+"""добавить атрибут
+    input - имя/идентификатор атрибута
+    output - none
+
+"""
 def addAttribute(name):
     #pass
     attributeEmptyVector = np.zeros(items.size/items.columns.size)
@@ -293,9 +255,15 @@ def addAttribute(name):
     items.to_csv('content-items2.csv', sep=',', encoding='utf-8')
 
 
-################################################################CONTEN-BASED#######################################################################
+################################################################CONTEN-BASED-ALORITHMS#######################################################################
 
-def getRec(num):
+
+"""получить рекомендации content-based
+    input - имя/идентификатор пользователя, количество оценок
+    output - content-based рекомендации
+
+"""
+def getRec(num, nBestProducts):
 
     """
     calcucalate support data
@@ -335,14 +303,26 @@ def getRec(num):
 
     result = np.zeros((m,u))
     user1 = np.zeros(m)
+    one = dict()
     for i in range(0,u):
         for j in range(0, m):
             result[j][i] = dotProduct3(article[j], usersVec[i], IDF, n)
             user1[j] = dotProduct3(article[j], usersVec[num], IDF, n)
+            #one[j] = [user1[j], items.iloc[[j]].index.tolist()[0]]
+            one[items.iloc[[j]].index.tolist()[0]] = user1[j]
+            #res = [items.iloc[[j]].index.tolist()[0], user1[j]]
 
-    return user1;
+    bestProducts = sorted(one.items(), key=lambda xy:(xy[1],xy[0]), reverse=True)[:nBestProducts]
+    res = [(x[0], x[1]) for x in bestProducts]
+
+    return res;
 
 
+"""скалярное произведение
+    input - 3 вектора
+    output - результат скалярного произведения
+
+"""
 def dotProduct3 (vecA, vecB, vecC, n):
             d = 0.0
             for i in range(1, n-1):
@@ -354,6 +334,177 @@ def dotProduct3 (vecA, vecB, vecC, n):
 
 #################################################################COLLOBORATIVE######################################################################
 
+class CollaborativeViewSet(viewsets.ModelViewSet):
+    """
+    A viewset that provides the standard actions
+    """
+    queryset = recommendations.objects.all()
+    serializer_class = RecSerializer
+
+
+
+
+    @list_route(methods=['post'])
+    def rec(self, request):
+        #data = csv.reader('A1Ratings.csv')
+        #file = open('A1Ratings.csv', 'r')
+        #data = [row for row in csv.reader(file)]
+        row = self.request.data.get("row")
+        cell = self.request.data.get("cell")
+        df = pd.read_csv('A1Ratings.csv')
+        if row:
+            if cell:
+                return  Response({df.columns[int(row)]+ " at " + str(cell) + " score": df[df.columns[int(row)]][int(cell)]})
+            else:
+                return  Response({df.columns[int(row)]: df[df.columns[int(row)]]})
+        else:
+            return Response({"Error: look at the full table": df})
+
+    @list_route()
+    def lists(self, request):
+        txt=""
+        txt2=""
+        f = open('rating.txt', 'r')
+        for line in f:
+           line =  line.split(',')
+           if(txt2==""):
+               txt2=line
+           txt= txt + '  ' + line[0]# + ' ' + line[1]
+           for score in line:
+                txt2 = txt2 #+ score
+
+        f.close()
+        return Response({"list of Users id": txt, "list of films":txt2})
+
+    @detail_route()
+    def score(self, request, pk=None):
+        txt=""
+        result=0
+        count=0
+        f = open('rating.txt', 'r')
+        if(pk.__len__()>2):
+            for line in f:
+               line =  line.split(',')
+               txt = txt + '  ' + line[int(pk[0])]# + ' ' + line[1]
+
+            f.close()
+            return Response({"cell/row": txt[int(pk[2])]})
+        else:
+            for line in f:
+               line =  line.split(',')
+               txt = txt + '  ' + line[int(pk[0])]# + ' ' + line[1]
+               if line[int(pk[0])].isdigit():
+                   result = result + int(line[int(pk[0])])
+                   count = count + 1
+            result = result / count
+            f.close()
+            return Response({"countOfScores": str(count), "avgScore": str(result),"row": txt})
+
+
+    @list_route(methods=['post'])
+    def recommendations(self, request):
+        #rec = makeRecommendation ('ivan', ReadFile(), 5, 5)
+        """
+        http://habrahabr.ru/post/150399/
+        привести A1Ratings.csv к виду словарю
+        аналогия с файлом Ratings.csv
+        df = pd.read_csv('A1Ratings.csv')
+        if row:
+            if cell:
+                return  Response({df.columns[int(row)]+ " at " + str(cell) + " score": df[df.columns[int(row)]][int(cell)]})
+            else:
+                return  Response({df.columns[int(row)]: df[df.columns[int(row)]]})
+        """
+        try:
+            user = self.request.data.get("row")
+            df = pd.read_csv('A1Ratings.csv')
+            id =  str(df[df.columns[int(0)]][int(user)])
+            n = self.request.data.get("cell")
+            rec = makeRecommendation(id, File(), 5, int(n))
+            result = "succes: our reccomendations for user: " + id
+            return Response({result: rec})
+        except:
+            return Response({"Error"})
+
+    """добавить item
+    input - имя/идентификатор item
+    output - successfulness
+
+    """
+    @list_route(methods=['post'])
+    def additem(self, request):
+        try:
+            name = self.request.data.get("row")
+            addItem2(name)
+            return Response({"result": "success"})
+        except:
+            return Response({"Error"})
+
+    """добавить user
+    input - имя/идентификатор пользователя
+    output - successfulness
+
+    """
+    @list_route(methods=['post'])
+    def adduser(self, request):
+        try:
+            userid = self.request.data.get("row")
+            addUser2(int(userid))
+            return Response({"result": "success"})
+        except:
+            return Response({"Error"})
+
+    """добавить оценку
+    input - имя/идентификатор item, имя/идентификатор пользователя, оценка
+    output - successfulness, список пользователей
+
+    """
+    @list_route(methods=['post'])
+    def addUserScore(self, request):
+        try:
+            usernumber = self.request.data.get("row")
+            itemnumber = self.request.data.get("cell")
+            score = int(self.request.data.get("score"))
+            if(score>0 and score<6):
+                users=addUserScore2(int(usernumber), int(itemnumber), score)
+                return Response({"result": "success"})
+            else:
+                return Response({"Error": "score must be from 1 to 5"})
+        except:
+            return Response({"Error"})
+
+
+#################################################################COLLABORATIVE-CRUD#####################################################################
+
+def addUser2(userId):
+    #pass
+    df = pd.read_csv('A1Ratings.csv')
+    countUsers = df.columns.size
+    countItems = df.size/df.columns.size
+    user = np.zeros(countUsers)
+    for j in range(0, len(user)):
+        user[j]=np.nan
+    user[0]=userId
+    df.loc[countItems] = user
+    df.to_csv('A1Ratings.csv', sep=',', encoding='utf-8', index=False)
+
+def addItem2(name):
+    #pass
+    df = pd.read_csv('A1Ratings.csv')
+    newItem = np.zeros(df.size/df.columns.size)
+    for j in range(0, len(newItem)):
+        newItem[j]=np.nan
+    df[name]=newItem
+    df.to_csv('A1Ratings.csv', sep=',', encoding='utf-8', index=False)
+
+def addUserScore2(userNumber, itemNumber, score):
+    #pass
+    df = pd.read_csv('A1Ratings.csv')
+    df[df.columns[itemNumber+1]][userNumber]=score
+    df.to_csv('A1Ratings.csv', sep=',', encoding='utf-8', index=False)
+
+
+#################################################################COLLABORATIVE-ALGORITHMS#####################################################################
 
 
 def ReadFile (filename = "Ratings.csv"):
@@ -403,7 +554,10 @@ def distCosine (vecA, vecB):
                 if dim in vecB:
                     d += vecA[dim]*vecB[dim]
             return d
-    return dotProduct (vecA,vecB) / math.sqrt(dotProduct(vecA,vecA)) / math.sqrt(dotProduct(vecB,vecB))
+    try:
+        return dotProduct (vecA,vecB) / math.sqrt(dotProduct(vecA,vecA)) / math.sqrt(dotProduct(vecB,vecB))
+    except:
+        return 0
 
 def makeRecommendation (userID, userRates, nBestUsers, nBestProducts):
     matches = [(u, distCosine(userRates[userID], userRates[u])) for u in userRates if u != userID]
@@ -427,19 +581,4 @@ def makeRecommendation (userID, userRates, nBestUsers, nBestProducts):
     #for prodInfo in bestProducts:
         #print "  ProductID: %6s  CorrelationCoeff: %6.4f" % (prodInfo[0], prodInfo[1])
     return [(x[0], x[1]) for x in bestProducts]
-
-
-def get_item_item_association_matrix(sp_matrix):
-    """Простой способ построения матрицы ассоциаций
-
-        :param sp_matrix: матрица с исходными данными о просмотрах (фильмы x пользователи)
-        :return: матрица схожести фильмов (фильмы x фильмы)
-        """
-    watched_x_and_y = sp_matrix.dot(sp_matrix.T).tocsr()
-    watched_x = sparse.csr_matrix(sp_matrix.sum(axis=1))
-    magic = sparse.binarize(watched_x_and_y).multiply(watched_x.T)
-    watched_not_x_and_y = magic - watched_x_and_y
-    rows, cols = watched_not_x_and_y.nonzero()
-    data_in_same_pos = watched_x_and_y[rows, cols].A.reshape(-1)
-    return sparse.csr_matrix((data_in_same_pos / watched_not_x_and_y.data, (rows, cols)), watched_x_and_y.shape)
 

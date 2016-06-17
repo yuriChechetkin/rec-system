@@ -3,7 +3,8 @@ from rest_framework import routers
 from diploma.recsystems import views
 
 router = routers.DefaultRouter()
-router.register(r'api', views.RecViewSet)
+router.register(r'content-based', views.ContentBasedViewSet)
+router.register(r'collaborative', views.CollaborativeViewSet)
 router.register(r'users', views.UserViewSet)
 router.register(r'groups', views.GroupViewSet)
 
